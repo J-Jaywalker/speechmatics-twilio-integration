@@ -265,7 +265,7 @@ async def _configure_twilio_number(twiml_url: str) -> None:
     await asyncio.to_thread(
         client.incoming_phone_numbers(number.sid).update,
         voice_url=twiml_url,
-        voice_method="POST",
+        voice_method="GET",
     )
 
 
@@ -278,7 +278,7 @@ async def main() -> None:
     await _configure_twilio_number(base_url + "/twiml")
 
     async def _process_request(path, _headers):
-        if path == "/twiml":
+        if path.split("?", 1)[0] == "/twiml":
             return (
                 HTTPStatus.OK,
                 [
