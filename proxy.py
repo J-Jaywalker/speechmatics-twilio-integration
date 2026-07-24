@@ -67,6 +67,7 @@ TWILIO_AUDIO_FORMAT = AudioFormat(
     chunk_size=160,
 )
 
+
 class AsyncQueueSource:
     """File-like async source backed by an asyncio.Queue of audio frames.
 
@@ -134,6 +135,7 @@ class CallSession:
     async def _run(self) -> None:
         transcription_config = TranscriptionConfig(
             language=LANGUAGE,
+            max_delay=0.7,
             enable_partials=True,
             model=Model.ENHANCED,
             diarization="channel",
@@ -142,6 +144,18 @@ class CallSession:
 
         try:
             async with AsyncMultiChannelClient(api_key=SM_API_KEY) as client:
+                # transcribe() returns as soon as the sources hit EOF
+                # Server still needs a moment to flush its final transcripts.
+                eot = asyncio.Event()
+
+                @client.on(ServerMessageType.END_OF_TRANSCRIPT)
+                def _on_eot(_msg):
+                    eot.set()
+
+                @client.on(ServerMessageType.ADD_PARTIAL_TRANSCRIPT)
+                def _on_partial(_msg):
+                    # Stub. Wire partials here if wanted.
+                    pass
 
                 @client.on(ServerMessageType.ADD_TRANSCRIPT)
                 def _on_final(msg):
@@ -163,6 +177,12 @@ class CallSession:
                     transcription_config=transcription_config,
                     audio_format=TWILIO_AUDIO_FORMAT,
                 )
+                try:
+                    await asyncio.wait_for(eot.wait(), timeout=10.0)
+                except asyncio.TimeoutError:
+                    print("Timed out waiting for END_OF_TRANSCRIPT", file=sys.stderr)
+                sys.stdout.write("\n")
+                sys.stdout.flush()
         except AuthenticationError as e:
             print(f"Speechmatics auth error: {e}", file=sys.stderr)
         except Exception as e:  # noqa: BLE001
@@ -220,12 +240,9 @@ async def handle_twilio_call(ws) -> None:
             await session.close()
 
 
-async def ws_handler(websocket, path):
-    if path == "/twilio":
-        print("[twilio] incoming Media Streams connection")
-        await handle_twilio_call(websocket)
-    else:
-        print(f"[twilio] ignoring connection on path {path}")
+async def ws_handler(websocket, _path):
+    print("[twilio] incoming Media Streams connection")
+    await handle_twilio_call(websocket)
 
 
 def _check_env_vars() -> None:
