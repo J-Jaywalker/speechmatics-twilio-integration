@@ -98,6 +98,34 @@ in the Twilio Console.
 - **μ-law forwarded natively**, no transcoding. Twilio ships μ-law 8 kHz;
   Speechmatics accepts μ-law 8 kHz. One less pipeline stage.
 
+## Development / running the tests
+
+The `tests/` folder contains a pytest suite covering the pieces of
+`proxy.py` that map to the integration requirements — audio queueing,
+call-session routing, TwiML generation, and Twilio Media Streams event
+handling. It uses a fake WebSocket and mocks the Speechmatics client, so
+no live services (Twilio, Speechmatics, ngrok) are contacted.
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Layout:
+
+```
+tests/
+├── conftest.py              # fake WebSocket + canned Twilio event fixtures
+├── test_audio_queue.py      # AsyncQueueSource blocking/EOF semantics
+├── test_call_session.py     # frame routing, wire-format constants
+├── test_handler.py          # handle_twilio_call end-to-end (mocked)
+└── test_twiml.py            # <Response> / <Start> / <Stream> shape
+```
+
+Use this suite as scaffolding when adapting the integration for your own
+setup — swap in your own handler code, then re-run `pytest` to confirm
+you haven't broken the contract with Twilio or Speechmatics.
+
 ## Production considerations
 
 This is a demo. Before shipping to production:
