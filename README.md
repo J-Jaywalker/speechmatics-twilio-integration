@@ -111,13 +111,6 @@ This is a demo. Before shipping to production:
 - Consider what "the call is over" means — Twilio's `stop` event is
   reliable, but the WebSocket may also just drop.
 
-## Batch alternative
-
-For post-call analysis (QA, compliance, sentiment) you don't need a live
-stream — record the call with `<Record>` and submit the recording to the
-Speechmatics Batch API when it's done. That path is covered in a separate
-example (TODO).
-
 ## Troubleshooting
 
 - **`Missing required env vars in .env: ...`** — copy `.env.example` to
