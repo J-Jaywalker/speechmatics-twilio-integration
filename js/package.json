@@ -1,0 +1,32 @@
+{
+  "name": "speechmatics-twilio-integration-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node.js reference: Twilio Voice <-> Speechmatics Realtime proxy (multi-channel).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "tsx proxy.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^1.7.0",
+    "@speechmatics/auth": "^0.1.0",
+    "@speechmatics/real-time-client": "^8.5.0",
+    "dotenv": "^16.4.0",
+    "twilio": "^6.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.0",
+    "fast-xml-parser": "^5.10.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
