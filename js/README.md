@@ -12,21 +12,8 @@ JS SDK. Both sides of the call are transcribed via Speechmatics' multi-channel
 diarization, so you get a clean `Inbound` vs `Outbound` split without any
 client-side audio mixing.
 
-## What you'll build
-
-```
-┌────────┐    ┌────────┐    ┌──────────┐    ┌─────────────────────┐
-│ Caller │───▶│ Twilio │───▶│ proxy.ts │───▶│ Speechmatics RT     │
-└────────┘    └────────┘    └──────────┘    │ (multi-channel)     │
-                                            └──────────┬──────────┘
-                                                       │
-                                             transcripts to console
-```
-
-- Twilio forks the live call audio to `proxy.ts` over WebSocket (μ-law 8 kHz).
-- `proxy.ts` relays audio to Speechmatics Realtime — no transcoding needed.
-- Speechmatics returns per-channel transcripts, printed to your console with
-  partials overwriting in place and finals committing to new lines.
+See the [root README](../README.md#architecture) for the end-to-end
+diagram of Caller ↔ Twilio ↔ proxy ↔ Speechmatics.
 
 ## Prerequisites
 
@@ -103,45 +90,10 @@ Console.
 - **μ-law forwarded natively**, no transcoding. Twilio ships μ-law 8 kHz;
   Speechmatics accepts μ-law 8 kHz. One less pipeline stage.
 
-## Development / running the tests
+## Tests
 
-The `tests/` folder contains a Vitest suite covering the pieces of
-`proxy.ts` that map to the integration requirements — session routing,
-TwiML generation, and Twilio Media Streams event handling. It uses a fake
-WebSocket and spies on `CallSession`, so no live services (Twilio,
-Speechmatics, ngrok) are contacted.
-
-```bash
-npm test           # single run
-npm run test:watch # re-run on file changes
-npm run typecheck  # tsc --noEmit
-```
-
-Layout:
-
-```
-tests/
-├── call-session.test.ts     # frame routing, wire-format constants, close cascade
-├── handler.test.ts          # handleTwilioCall end-to-end (mocked)
-└── twiml.test.ts            # <Response> / <Start> / <Stream> shape
-```
-
-Use this suite as scaffolding when adapting the integration for your own
-setup — swap in your own handler code, then re-run `npm test` to confirm
-you haven't broken the contract with Twilio or Speechmatics.
-
-## Production considerations
-
-This is a demo. Before shipping to production:
-
-- Replace the raw `node:http` + `ws` server with a proper framework
-  (Fastify, Hono, Express) behind a reverse proxy.
-- Move credentials from `.env` to a real secret manager.
-- Add auth on the `/twilio` endpoint (Twilio can sign requests — verify
-  the signature).
-- Add structured logging and metrics rather than `console.log`.
-- Consider what "the call is over" means — Twilio's `stop` event is
-  reliable, but the WebSocket may also just drop.
+See [`tests/README.md`](tests/README.md) for the Vitest suite that
+covers the integration requirements.
 
 ## Troubleshooting
 

@@ -13,29 +13,42 @@ matches your stack and follow the README in that folder:
 | Python | [`python/`](python/) | [`python/README.md`](python/README.md) |
 | Node.js / TypeScript | [`js/`](js/) | [`js/README.md`](js/README.md) |
 
-Both implementations read the same `.env` file at this repo root, so you
-configure your Speechmatics / Twilio / ngrok credentials once and can switch
-between languages freely. Copy the template to get started:
-
-```bash
-cp .env.example .env
-$EDITOR .env
-```
-
 ## Architecture
 
 ```
-┌────────┐    ┌────────┐    ┌────────────┐    ┌─────────────────────┐
-│ Caller │───▶│ Twilio │───▶│ proxy.py / │───▶│ Speechmatics RT     │
-└────────┘    └────────┘    │ proxy.ts   │    │ (multi-channel)     │
-                            └────────────┘    └──────────┬──────────┘
-                                                         │
-                                              transcripts to console
+  ┌──────────┐      ┌────────┐      ┌──────────┐
+  │ Caller A │◀──══▶│ Twilio │◀──══▶│ Caller B │      ═══  bridged voice
+  └──────────┘      └────┬───┘      └──────────┘           (PSTN)
+                         │
+                         │  audio fork  (both_tracks, μ-law 8 kHz)
+                         ▼
+                 ┌───────────────┐
+                 │ proxy.py /    │
+                 │ proxy.ts      │
+                 └───────┬───────┘
+                         │
+                         │  Realtime WebSocket
+                         ▼
+             ┌───────────────────────┐
+             │ Speechmatics Realtime │
+             │ (multi-channel)       │
+             └───────────┬───────────┘
+                         │
+                         │  per-channel transcripts
+                         ▼
+                    ┌─────────┐
+                    │ console │
+                    └─────────┘
 ```
 
-- Twilio forks the live call audio to the proxy over WebSocket (μ-law 8 kHz).
-- The proxy relays audio to Speechmatics Realtime — no transcoding.
-- Speechmatics returns per-channel transcripts, printed with partials
+- **Caller A** dials the Twilio number; Twilio bridges the call to
+  **Caller B** via TwiML `<Dial>` — two humans talk normally.
+- Twilio simultaneously **forks** the live call audio (both tracks) to
+  the proxy over WebSocket in Twilio's native μ-law 8 kHz format.
+- The proxy relays those frames to Speechmatics Realtime — **no
+  transcoding**, no re-encoding.
+- Speechmatics returns per-channel transcripts tagged with the track
+  they came from; the proxy prints them to the console with partials
   overwriting in place and finals committing to new lines.
 
 The language-specific READMEs cover prerequisites, setup, `.env` variables,

@@ -11,21 +11,8 @@ Both sides of the call are transcribed via Speechmatics' multi-channel
 diarization, so you get a clean `Inbound` vs `Outbound` split without any
 client-side audio mixing.
 
-## What you'll build
-
-```
-┌────────┐    ┌────────┐    ┌─────────┐    ┌─────────────────────┐
-│ Caller │───▶│ Twilio │───▶│ proxy.py│───▶│ Speechmatics RT     │
-└────────┘    └────────┘    └─────────┘    │ (multi-channel)     │
-                                           └──────────┬──────────┘
-                                                      │
-                                            transcripts to console
-```
-
-- Twilio forks the live call audio to `proxy.py` over WebSocket (μ-law 8 kHz).
-- `proxy.py` relays audio to Speechmatics Realtime — no transcoding needed.
-- Speechmatics returns per-channel transcripts, printed to your console with
-  partials overwriting in place and finals committing to new lines.
+See the [root README](../README.md#architecture) for the end-to-end
+diagram of Caller ↔ Twilio ↔ proxy ↔ Speechmatics.
 
 ## Prerequisites
 
@@ -101,46 +88,10 @@ in the Twilio Console.
 - **μ-law forwarded natively**, no transcoding. Twilio ships μ-law 8 kHz;
   Speechmatics accepts μ-law 8 kHz. One less pipeline stage.
 
-## Development / running the tests
+## Tests
 
-The `tests/` folder contains a pytest suite covering the pieces of
-`proxy.py` that map to the integration requirements — audio queueing,
-call-session routing, TwiML generation, and Twilio Media Streams event
-handling. It uses a fake WebSocket and mocks the Speechmatics client, so
-no live services (Twilio, Speechmatics, ngrok) are contacted.
-
-```bash
-pip install -r requirements-dev.txt
-pytest
-```
-
-Layout:
-
-```
-tests/
-├── conftest.py              # fake WebSocket + canned Twilio event fixtures
-├── test_audio_queue.py      # AsyncQueueSource blocking/EOF semantics
-├── test_call_session.py     # frame routing, wire-format constants
-├── test_handler.py          # handle_twilio_call end-to-end (mocked)
-└── test_twiml.py            # <Response> / <Start> / <Stream> shape
-```
-
-Use this suite as scaffolding when adapting the integration for your own
-setup — swap in your own handler code, then re-run `pytest` to confirm
-you haven't broken the contract with Twilio or Speechmatics.
-
-## Production considerations
-
-This is a demo. Before shipping to production:
-
-- Replace the built-in `websockets.serve` with a proper ASGI runner
-  (uvicorn, hypercorn) behind a reverse proxy.
-- Move credentials from `.env` to a real secret manager.
-- Add auth on the `/twilio` endpoint (Twilio can sign requests — verify
-  the signature).
-- Add structured logging and metrics rather than `print()`.
-- Consider what "the call is over" means — Twilio's `stop` event is
-  reliable, but the WebSocket may also just drop.
+See [`tests/README.md`](tests/README.md) for the pytest suite that
+covers the integration requirements.
 
 ## Troubleshooting
 
